@@ -19,5 +19,9 @@ STUDENTS = {
         "reg": "2690674",
         "password": "AMC@bash123"
     },
+     "reshad": {
+        "reg": "2628548",
+        "password": "Rakin$hsc26"
+    },
     # Add more students below in the same format
 }
