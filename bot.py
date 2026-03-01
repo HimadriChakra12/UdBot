@@ -93,11 +93,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.startswith("@"):
         query = query.split(" ", 1)[-1].strip() if " " in query else ""
 
-    # Check fixed replies — only works if sender is you
-    if update.message.from_user.id == MY_TELEGRAM_ID:
-        if query.lower() in FIXED_REPLIES:
-            await update.message.reply_text(FIXED_REPLIES[query.lower()])
-            return
+    # Check fixed replies — anyone can use them
+    if query.lower() in FIXED_REPLIES:
+        await update.message.reply_text(FIXED_REPLIES[query.lower()])
+        return
 
     parsed = parse_message(text)
 
