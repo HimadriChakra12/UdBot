@@ -20,6 +20,7 @@ FIXED_REPLIES = {
     "shirshar ki kora uchit?": "ekta proper reality check khawa",
     "shiropar ki kora uchit?": "Weight loss.",
     "tomar ki kora uchit?": "tomader number dekhe hasha",
+    "gali de": "bainchod kuttachoda besshamagi nodirput halarbhai khankirpola lewrachoda gushkirpola dhemnamagi chutmarani madarchod aluchoda potolchoda ut-khankir-dim condomchoda dinosaurchoda",
     # "another trigger": "another reply",
 }
 
