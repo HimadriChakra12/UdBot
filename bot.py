@@ -16,12 +16,13 @@ MY_TELEGRAM_ID = 1607298724
 FIXED_REPLIES = {
     "ovrar ki kora uchit?": "porashuna kora",
     "shiropa onek cute": "hard agree",
-    "sayaner ki kora uchit?": "dhumay prem kora",
+    "sayaner ki kora uchit?": "dhumay haat mara",
+    "ankaner ki kora uchit?":"ankan ke? chinina to!",
     "shirshar ki kora uchit?": "ekta proper reality check khawa",
     "shiropar ki kora uchit?": "Weight loss.",
     "tomar ki kora uchit?": "tomader number dekhe hasha",
     "gali de": "bainchod kuttachoda besshamagi nodirput halarbhai khankirpola lewrachoda gushkirpola dhemnamagi chutmarani madarchod aluchoda potolchoda ut-khankir-dim condomchoda dinosaurchoda",
-    "jore gali de":"BAINCHOD KUTTACHODA BESSHAMAGI NODIRPUT HALARBHAI KHANKIRPOLA LEWRACHODA GUSHKIRPOLA DHEMNAMAGI CHUTMARANI MADARCHOD ALUCHODA POTOLCHODA UT-KHANKIR-DIM CONDOMCHODA DINOSAURCHODA"
+    "jore gali de":"BAINCHOD  KUTTACHODA  BESSHAMAGI  NODIRPUT  HALARBHAI  KHANKIRPOLA  LEWRACHODA  GUSHKIRPOLA  DHEMNAMAGI  CHUTMARANI  MADARCHOD  ALUCHODA  POTOLCHODA  UT-KHANKIR-DIM  CONDOMCHODA  DINOSAURCHODA",
     # "another trigger": "another reply",
 }
 
