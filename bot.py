@@ -164,8 +164,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
+async def debug_subjects(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from scraper import debug_exam_names
+    result = await debug_exam_names()
+    await update.message.reply_text(result)
 
 app = ApplicationBuilder().token(os.getenv("BOT_TOKEN")).build()
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("debug", debug_subjects))
 app.add_handler(MessageHandler(filters.TEXT, handle_message))
 app.run_polling(allowed_updates=Update.ALL_TYPES)
