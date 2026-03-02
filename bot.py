@@ -26,6 +26,8 @@ FIXED_REPLIES = {
     # "another trigger": "another reply",
 }
 
+# Tracks which students are disabled — resets on bot restart
+DISABLED_STUDENTS = set()
 
 def parse_message(text):
     text = text.strip().lower()
@@ -45,6 +47,10 @@ def parse_message(text):
 
     if exam_part == "total":
         return {"total": True, "nickname": nickname}
+    if exam_part == "off":
+        return {"switch": "off", "nickname": nickname}
+    if exam_part == "on":
+        return {"switch": "on", "nickname": nickname}
 
     match_no_paper   = re.match(r'^([a-z]+)-(\d+)$', exam_part)
     match_with_paper = re.match(r'^([a-z]+)-(\d+)-(\d+)$', exam_part)
@@ -120,6 +126,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(parsed["error"])
         return
 
+    if parsed.get("switch"):
+        nickname = parsed["nickname"]
+        if parsed["switch"] == "off":
+            DISABLED_STUDENTS.add(nickname)
+            await update.message.reply_text(f"Results for *{nickname}* have been disabled.", parse_mode="Markdown")
+        elif parsed["switch"] == "on":
+            DISABLED_STUDENTS.discard(nickname)
+            await update.message.reply_text(f"Results for *{nickname}* have been enabled.", parse_mode="Markdown")
+        return
+
+    if parsed["nickname"] in DISABLED_STUDENTS:
+        await update.message.reply_text(f"Results for *{parsed['nickname']}* are currently disabled.", parse_mode="Markdown")
+        return
+
     await update.message.reply_text("Fetching result, please wait...")
 
     if parsed.get("total"):
@@ -164,13 +184,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
-async def debug_subjects(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from scraper import debug_exam_names
-    result = await debug_exam_names()
-    await update.message.reply_text(result)
 
 app = ApplicationBuilder().token(os.getenv("BOT_TOKEN")).build()
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("debug", debug_subjects))
 app.add_handler(MessageHandler(filters.TEXT, handle_message))
 app.run_polling(allowed_updates=Update.ALL_TYPES)
