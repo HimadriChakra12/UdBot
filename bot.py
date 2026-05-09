@@ -30,7 +30,7 @@ FIXED_REPLIES = {
     "shiropa onek cute": "hard agree",
     "sayaner ki kora uchit?": "dhumay haat mara",
     "ankaner ki kora uchit?": "ankan ke? chinina to!",
-    "reshader ki kora uchit?": "aro handsome howa:,
+    "reshader ki kora uchit?": "aro handsome howa",
     "shirshar ki kora uchit?": "ekta proper reality check khawa",
     "shiropar ki kora uchit?": "Weight loss.",
     "tomar ki kora uchit?": "tomader number dekhe hasha",
