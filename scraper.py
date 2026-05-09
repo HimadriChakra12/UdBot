@@ -14,6 +14,16 @@ SUBJECT_MAP = {
     "ict":    "ICT",
 }
 
+# How each subject appears in the booster exam name
+BOOSTER_SUBJECT_MAP = {
+    "bangla": "bangla",
+    "chem":   "chemistry",
+    "bio":    "biology",
+    "phys":   "physics",
+    "hmath":  "higher math",
+    "ict":    "ict",
+}
+
 PAPER_MAP = {
     "1": "1st",
     "2": "2nd",
@@ -146,6 +156,7 @@ async def fetch_booster(nickname, subject_code):
 
     student = STUDENTS[nickname]
     subject_full = SUBJECT_MAP[subject_code]
+    search_keyword = BOOSTER_SUBJECT_MAP[subject_code]
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -157,13 +168,11 @@ async def fetch_booster(nickname, subject_code):
             await browser.close()
             return "Results table did not load in time. Try again."
 
-        # Find the div with the booster course title, then get its sibling/following table
         booster_div = await page.query_selector(f"div.course-title:has-text('{BOOSTER_DIV_TEXT}')")
         if not booster_div:
             await browser.close()
             return "Could not find the MCQ Booster course section on the page."
 
-        # Get the table that follows this div
         booster_table = await page.evaluate_handle("""
             (div) => {
                 let el = div.nextElementSibling;
@@ -187,9 +196,9 @@ async def fetch_booster(nickname, subject_code):
         for row in rows:
             cells = [await cell.inner_text() for cell in await row.query_selector_all("td, th")]
             cells = [c.strip() for c in cells]
-            if len(cells) >= 2:
-                exam_name = cells[0].lower()
-                if subject_full.lower() in exam_name:
+            if len(cells) >= 10:
+                exam_name = cells[2].lower()
+                if search_keyword in exam_name:
                     matched_cells = cells
                     break
 
@@ -198,16 +207,19 @@ async def fetch_booster(nickname, subject_code):
     if not matched_cells:
         return f"No booster result found for {subject_full}."
 
-    # Columns: Exam Name, Total Marks, Highest Marks, Branch Merit, Central Merit
-    exam_name     = matched_cells[0]
-    total_marks   = matched_cells[1]
-    highest       = matched_cells[2]
-    branch_merit  = matched_cells[3]
-    central_merit = matched_cells[4]
+    # Columns: [0] Serial, [1] Date, [2] Exam Name, [3] Platform,
+    #          [4] MCQ Marks, [5] Written Marks, [6] Deduction,
+    #          [7] Total Marks, [8] Highest Marks, [9] Branch Merit, [10] Central Merit
+    exam_name     = matched_cells[2]
+    mcq_marks     = matched_cells[4]
+    total_marks   = matched_cells[7]
+    highest       = matched_cells[8]
+    branch_merit  = matched_cells[9]
+    central_merit = matched_cells[10]
 
     lines = [
-        f"🚀 *{nickname.upper()} — {exam_name} (Booster)*",
-        f"Total Marks: {total_marks}",
+        f"🚀 *{nickname.upper()} — {exam_name}*",
+        f"MCQ Marks: {mcq_marks}",
         f"Highest Marks: {highest}",
         f"Branch Merit: {branch_merit}",
         f"Central Merit: {central_merit}",
@@ -234,7 +246,6 @@ async def fetch_total(nickname):
             await browser.close()
             return "Results table did not load in time. Try again."
 
-        # Find the table that contains course merit data
         tables = await page.query_selector_all("table")
 
         merit_table = None
