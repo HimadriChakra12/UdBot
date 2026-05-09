@@ -23,6 +23,32 @@ PAPER_MAP = {
 
 NO_PAPER_SUBJECTS = ["ict"]
 
+BOOSTER_VALID_SUBJECTS = ["bangla", "chem", "bio", "phys", "hmath", "ict"]
+BOOSTER_DIV_TEXT = "HSC/Alim MCQ Booster Course (for Science)"
+
+
+async def _login_and_goto_report(page, student):
+    await page.goto(LOGIN_URL, wait_until="domcontentloaded")
+    await page.wait_for_selector("input[name='RegistrationNumber']", timeout=15000)
+    await page.fill("input[name='RegistrationNumber']", student["reg"])
+    await page.click("#btnSubmit")
+    await page.wait_for_load_state("domcontentloaded")
+
+    await page.wait_for_selector("input[name='Password']", timeout=15000)
+    await page.fill("input[name='Password']", student["password"])
+    await page.click("button[type='submit']")
+    await page.wait_for_load_state("domcontentloaded")
+
+    await page.goto(DATA_URL, wait_until="domcontentloaded")
+
+    try:
+        await page.wait_for_selector("table tr td", timeout=20000)
+    except:
+        return False
+
+    await page.wait_for_timeout(2000)
+    return True
+
 
 async def fetch_result(nickname, subject_code, paper_no, exam_serial, show_cq, show_mcq, show_marks, show_branch, show_central):
     nickname = nickname.lower()
@@ -52,26 +78,10 @@ async def fetch_result(nickname, subject_code, paper_no, exam_serial, show_cq, s
         page = await browser.new_page()
         page.set_default_timeout(60000)
 
-        await page.goto(LOGIN_URL, wait_until="domcontentloaded")
-        await page.wait_for_selector("input[name='RegistrationNumber']", timeout=15000)
-        await page.fill("input[name='RegistrationNumber']", student["reg"])
-        await page.click("#btnSubmit")
-        await page.wait_for_load_state("domcontentloaded")
-
-        await page.wait_for_selector("input[name='Password']", timeout=15000)
-        await page.fill("input[name='Password']", student["password"])
-        await page.click("button[type='submit']")
-        await page.wait_for_load_state("domcontentloaded")
-
-        await page.goto(DATA_URL, wait_until="domcontentloaded")
-
-        try:
-            await page.wait_for_selector("table tr td", timeout=20000)
-        except:
+        loaded = await _login_and_goto_report(page, student)
+        if not loaded:
             await browser.close()
             return "Results table did not load in time. Try again."
-
-        await page.wait_for_timeout(2000)
 
         rows = await page.query_selector_all("table tr")
 
@@ -125,6 +135,87 @@ async def fetch_result(nickname, subject_code, paper_no, exam_serial, show_cq, s
     return "\n".join(lines)
 
 
+async def fetch_booster(nickname, subject_code):
+    nickname = nickname.lower()
+
+    if nickname not in STUDENTS:
+        return f"No student found with nickname '{nickname}'. Check the spelling."
+
+    if subject_code not in BOOSTER_VALID_SUBJECTS:
+        return f"'{subject_code}' is not available in the booster course. Valid subjects: {', '.join(BOOSTER_VALID_SUBJECTS)}"
+
+    student = STUDENTS[nickname]
+    subject_full = SUBJECT_MAP[subject_code]
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        page.set_default_timeout(60000)
+
+        loaded = await _login_and_goto_report(page, student)
+        if not loaded:
+            await browser.close()
+            return "Results table did not load in time. Try again."
+
+        # Find the div with the booster course title, then get its sibling/following table
+        booster_div = await page.query_selector(f"div.course-title:has-text('{BOOSTER_DIV_TEXT}')")
+        if not booster_div:
+            await browser.close()
+            return "Could not find the MCQ Booster course section on the page."
+
+        # Get the table that follows this div
+        booster_table = await page.evaluate_handle("""
+            (div) => {
+                let el = div.nextElementSibling;
+                while (el) {
+                    if (el.tagName === 'TABLE') return el;
+                    let t = el.querySelector('table');
+                    if (t) return t;
+                    el = el.nextElementSibling;
+                }
+                return null;
+            }
+        """, booster_div)
+
+        if not booster_table:
+            await browser.close()
+            return "Could not find the booster results table."
+
+        rows = await booster_table.query_selector_all("tr")
+
+        matched_cells = None
+        for row in rows:
+            cells = [await cell.inner_text() for cell in await row.query_selector_all("td, th")]
+            cells = [c.strip() for c in cells]
+            if len(cells) >= 2:
+                exam_name = cells[0].lower()
+                if subject_full.lower() in exam_name:
+                    matched_cells = cells
+                    break
+
+        await browser.close()
+
+    if not matched_cells:
+        return f"No booster result found for {subject_full}."
+
+    # Columns: Exam Name, Total Marks, Highest Marks, Branch Merit, Central Merit
+    exam_name     = matched_cells[0]
+    total_marks   = matched_cells[1]
+    highest       = matched_cells[2]
+    branch_merit  = matched_cells[3]
+    central_merit = matched_cells[4]
+
+    lines = [
+        f"🚀 *{nickname.upper()} — {exam_name} (Booster)*",
+        f"Total Marks: {total_marks}",
+        f"Highest Marks: {highest}",
+        f"Branch Merit: {branch_merit}",
+        f"Central Merit: {central_merit}",
+    ]
+
+    return "\n".join(lines)
+
+
 async def fetch_total(nickname):
     nickname = nickname.lower()
 
@@ -138,26 +229,10 @@ async def fetch_total(nickname):
         page = await browser.new_page()
         page.set_default_timeout(60000)
 
-        await page.goto(LOGIN_URL, wait_until="domcontentloaded")
-        await page.wait_for_selector("input[name='RegistrationNumber']", timeout=15000)
-        await page.fill("input[name='RegistrationNumber']", student["reg"])
-        await page.click("#btnSubmit")
-        await page.wait_for_load_state("domcontentloaded")
-
-        await page.wait_for_selector("input[name='Password']", timeout=15000)
-        await page.fill("input[name='Password']", student["password"])
-        await page.click("button[type='submit']")
-        await page.wait_for_load_state("domcontentloaded")
-
-        await page.goto(DATA_URL, wait_until="domcontentloaded")
-
-        try:
-            await page.wait_for_selector("table tr td", timeout=20000)
-        except:
+        loaded = await _login_and_goto_report(page, student)
+        if not loaded:
             await browser.close()
             return "Results table did not load in time. Try again."
-
-        await page.wait_for_timeout(2000)
 
         # Find the table that contains course merit data
         tables = await page.query_selector_all("table")

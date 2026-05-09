@@ -8,13 +8,14 @@ import json
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 from dotenv import load_dotenv
-from scraper import fetch_result, fetch_total
+from scraper import fetch_result, fetch_total, fetch_booster
 from routine_handler import get_upcoming_all, get_upcoming_subject
 
 load_dotenv()
 
 VALID_SUBJECTS = ["bangla", "eng", "chem", "bio", "phys", "hmath", "ict"]
 NO_PAPER_SUBJECTS = ["ict"]
+BOOSTER_VALID_SUBJECTS = ["bangla", "chem", "bio", "phys", "hmath", "ict"]
 
 MY_TELEGRAM_ID = 1607298724
 
@@ -176,6 +177,13 @@ def parse_message(text):
     if exam_part == "total":
         return {"total": True, "nickname": nickname}
 
+    # Booster: /ubot nickname subject booster
+    if len(parts) >= 3 and parts[2] == "booster":
+        subject_code = exam_part
+        if subject_code not in BOOSTER_VALID_SUBJECTS:
+            return {"error": f"'{subject_code}' is not available in the booster course.\nValid subjects: {', '.join(BOOSTER_VALID_SUBJECTS)}"}
+        return {"booster": True, "nickname": nickname, "subject_code": subject_code}
+
     match_no_paper   = re.match(r'^([a-z]+)-(\d+)$', exam_part)
     match_with_paper = re.match(r'^([a-z]+)-(\d+)-(\d+)$', exam_part)
 
@@ -239,6 +247,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Example: `/ubot ovra chem-1-01`\n"
             "For ICT: `/ubot ovra ict-01`\n"
             "For course total: `/ubot ovra total`\n"
+            "For booster result: `/ubot ovra hmath booster`\n"
             "For upcoming exams: `/ubot upcoming` or `/ubot upcoming chem-1`",
             parse_mode="Markdown"
         )
@@ -274,6 +283,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if parsed.get("total"):
         result = await fetch_total(parsed["nickname"])
+        await update.message.reply_text(result, parse_mode="Markdown")
+        return
+
+    if parsed.get("booster"):
+        result = await fetch_booster(parsed["nickname"], parsed["subject_code"])
         await update.message.reply_text(result, parse_mode="Markdown")
         return
 
@@ -343,6 +357,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "`/ubot ovra phys-1-01 -cq -branch` — Written marks + branch merit\n"
         "`/ubot ovra ict-01` — ICT has no paper number\n"
         "`/ubot ovra total` — full course merit summary\n\n"
+        "*Booster results:*\n"
+        "`/ubot ovra hmath booster` — MCQ Booster result for Higher Math\n"
+        "`/ubot ovra chem booster` — MCQ Booster result for Chemistry\n"
+        "_(English not available in booster)_\n\n"
         "*Flags (optional):*\n"
         "`-cq` — Written/CQ marks\n"
         "`-mcq` — MCQ marks\n"
