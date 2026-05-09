@@ -177,6 +177,8 @@ def parse_message(text):
         return {"switch": "on", "nickname": nickname}
 
     if exam_part == "total":
+        if len(parts) >= 3 and parts[2] == "booster":
+            return {"total": True, "total_booster": True, "nickname": nickname}
         return {"total": True, "nickname": nickname}
 
     # Booster: /ubot nickname subject booster
@@ -284,7 +286,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Fetching result, please wait...")
 
     if parsed.get("total"):
-        result = await fetch_total(parsed["nickname"])
+        result = await fetch_total(parsed["nickname"], booster=parsed.get("total_booster", False))
         await update.message.reply_text(result, parse_mode="Markdown")
         return
 
@@ -358,7 +360,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "`/ubot ovra eng-2-01 -mcq -merit` — MCQ marks + central merit only\n"
         "`/ubot ovra phys-1-01 -cq -branch` — Written marks + branch merit\n"
         "`/ubot ovra ict-01` — ICT has no paper number\n"
-        "`/ubot ovra total` — full course merit summary\n\n"
+        "`/ubot ovra total` — full course merit summary\n"
+        "`/ubot ovra total booster` — booster course merit summary\n\n"
         "*Booster results:*\n"
         "`/ubot ovra hmath booster` — MCQ Booster result for Higher Math\n"
         "`/ubot ovra chem booster` — MCQ Booster result for Chemistry\n"

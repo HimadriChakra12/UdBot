@@ -228,7 +228,7 @@ async def fetch_booster(nickname, subject_code):
     return "\n".join(lines)
 
 
-async def fetch_total(nickname):
+async def fetch_total(nickname, booster=False):
     nickname = nickname.lower()
 
     if nickname not in STUDENTS:
@@ -261,18 +261,22 @@ async def fetch_total(nickname):
 
         rows = await merit_table.query_selector_all("tr")
 
-        data_row = None
+        # Collect all valid data rows (cells[0] is a digit = a real data row)
+        data_rows = []
         for row in rows:
             cells = [await cell.inner_text() for cell in await row.query_selector_all("td, th")]
             cells = [c.strip() for c in cells]
             if len(cells) >= 9 and cells[0].isdigit():
-                data_row = cells
-                break
+                data_rows.append(cells)
 
         await browser.close()
 
-    if not data_row:
-        return "Could not find course merit data."
+    # booster=False → first row (index 0); booster=True → second row (index 1)
+    target_index = 1 if booster else 0
+    if target_index >= len(data_rows):
+        return "Could not find course merit data." if not booster else "Could not find booster course merit data."
+
+    data_row = data_rows[target_index]
 
     course_name    = data_row[1]
     mcq_marks      = data_row[2]
@@ -283,8 +287,9 @@ async def fetch_total(nickname):
     branch_merit   = data_row[7]
     central_merit  = data_row[8]
 
+    label = "Booster Course Merit" if booster else "Course Merit"
     lines = [
-        f"📊 *{nickname.upper()} — Course Merit*",
+        f"📊 *{nickname.upper()} — {label}*",
         f"Course: {course_name}",
         f"Total MCQ Marks: {mcq_marks}",
         f"Total Written Marks: {written_marks}",
