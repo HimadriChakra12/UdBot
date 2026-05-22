@@ -8,7 +8,7 @@ import json
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 from dotenv import load_dotenv
-from scraper import fetch_result, fetch_total, fetch_booster
+from scraper import fetch_result, fetch_total, fetch_booster, fetch_model_result
 from routine_handler import get_upcoming_all, get_upcoming_subject
 
 load_dotenv()
@@ -181,6 +181,22 @@ def parse_message(text):
             return {"total": True, "total_booster": True, "nickname": nickname}
         return {"total": True, "nickname": nickname}
 
+    # Model exam: /ubot nickname subject-paper model  (or /ubot nickname ict model)
+    if len(parts) >= 3 and parts[2] == "model":
+        match_model         = re.match(r'^([a-z]+)-(\d+)$', exam_part)
+        match_model_nopaper = re.match(r'^([a-z]+)$', exam_part)
+        if match_model:
+            subject_code = match_model.group(1)
+            paper_no     = match_model.group(2)
+            if subject_code not in VALID_SUBJECTS:
+                return {"error": f"Unknown subject code '{subject_code}'.\nValid codes are: {', '.join(VALID_SUBJECTS)}"}
+            return {"model": True, "nickname": nickname, "subject_code": subject_code, "paper_no": paper_no}
+        elif match_model_nopaper and match_model_nopaper.group(1) in NO_PAPER_SUBJECTS:
+            subject_code = match_model_nopaper.group(1)
+            return {"model": True, "nickname": nickname, "subject_code": subject_code, "paper_no": None}
+        else:
+            return {"error": "Invalid format for model exam.\nExample: `/ubot ovra hmath-1 model` or `/ubot ovra ict model`"}
+
     # Booster: /ubot nickname subject booster
     if len(parts) >= 3 and parts[2] == "booster":
         subject_code = exam_part
@@ -292,6 +308,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if parsed.get("booster"):
         result = await fetch_booster(parsed["nickname"], parsed["subject_code"])
+        await update.message.reply_text(result, parse_mode="Markdown")
+        return
+
+    if parsed.get("model"):
+        result = await fetch_model_result(parsed["nickname"], parsed["subject_code"], parsed["paper_no"])
         await update.message.reply_text(result, parse_mode="Markdown")
         return
 

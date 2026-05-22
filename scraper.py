@@ -228,6 +228,77 @@ async def fetch_booster(nickname, subject_code):
     return "\n".join(lines)
 
 
+
+
+async def fetch_model_result(nickname, subject_code, paper_no):
+    nickname = nickname.lower()
+
+    if nickname not in STUDENTS:
+        return f"No student found with nickname '{nickname}'. Check the spelling."
+
+    student = STUDENTS[nickname]
+
+    subject_full = SUBJECT_MAP.get(subject_code)
+    if not subject_full:
+        return f"Unknown subject code '{subject_code}'."
+
+    if paper_no is None:
+        search_subject = subject_full.lower()
+        paper_word = None
+    else:
+        paper_word = PAPER_MAP.get(paper_no, paper_no + "th")
+        search_subject = f"{subject_full} {paper_word} Paper".lower()
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        page.set_default_timeout(60000)
+
+        loaded = await _login_and_goto_report(page, student)
+        if not loaded:
+            await browser.close()
+            return "Results table did not load in time. Try again."
+
+        rows = await page.query_selector_all("table tr")
+
+        matched_cells = None
+        for row in rows:
+            cells = [await cell.inner_text() for cell in await row.query_selector_all("td, th")]
+            cells = [c.strip() for c in cells]
+            if len(cells) >= 10:
+                exam_name = cells[2].lower()
+                if search_subject in exam_name and "exam-" not in exam_name and "booster" not in exam_name:
+                    matched_cells = cells
+                    break
+
+        await browser.close()
+
+    if not matched_cells:
+        label = f"{subject_full} {paper_word} Paper" if paper_word else subject_full
+        return f"No model exam result found for {label}."
+
+    mcq_marks     = matched_cells[4]
+    cq_marks      = matched_cells[5]
+    total_marks   = matched_cells[7]
+    highest       = matched_cells[8]
+    branch_merit  = matched_cells[9]
+    central_merit = matched_cells[10]
+
+    exam_label = matched_cells[2]
+
+    lines = [
+        f"📋 *{nickname.upper()} — {exam_label}*",
+        f"MCQ Marks: {mcq_marks}",
+        f"Written/CQ Marks: {cq_marks}",
+        f"Total Marks: {total_marks}",
+        f"Highest Marks: {highest}",
+        f"Branch Merit: {branch_merit}",
+        f"Central Merit: {central_merit}",
+    ]
+
+    return "\n".join(lines)
+
+
 async def fetch_total(nickname, booster=False):
     nickname = nickname.lower()
 
