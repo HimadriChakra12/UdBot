@@ -40,6 +40,7 @@ FIXED_REPLIES = {
     "goodnight": "Goodnight soldier. Stay strong rest well.",
     "tumi ki shohomot?": "100% shohomot",
     "lb": "lb",
+    "eid mubarak": "Eid Mubarak <3",
 }
 
 # ── Shared state ──────────────────────────────────────────────────────────────
